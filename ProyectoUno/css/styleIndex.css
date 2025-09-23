@@ -246,9 +246,19 @@ body::before {
     background: #2b5876;
     color: white;
 }
+.error-message-global {
+    color: #d93025;
+    background-color: #fce8e6;
+    border: 1px solid #f28b82;
+    border-radius: 4px;
+    padding: 12px;
+    margin: 10px 0;
+    text-align: center;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease-in;
+}
 
-@media (max-width: 480px) {
-    body.keyboard-visible {
-        padding-bottom: 270px;
-    }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

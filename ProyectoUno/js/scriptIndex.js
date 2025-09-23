@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let activeInput = null;
     
     // Inicializar contadores de caracteres
-    updateCharacterCount('username', 10);
+    updateCharacterCount('username', 8);
     updateCharacterCount('password', 4);
     
     // Mostrar teclado al hacer clic en los campos
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     keypadClear.addEventListener('click', function() {
         if (activeInput) {
             activeInput.value = '';
-            updateCharacterCount(activeInput.id, activeInput.id === 'username' ? 10 : 4);
+            updateCharacterCount(activeInput.id, activeInput.id === 'username' ? 8 : 4);
             validateField(activeInput);
         }
     });
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
     keypadBackspace.addEventListener('click', function() {
         if (activeInput) {
             activeInput.value = activeInput.value.slice(0, -1);
-            updateCharacterCount(activeInput.id, activeInput.id === 'username' ? 10 : 4);
+            updateCharacterCount(activeInput.id, activeInput.id === 'username' ? 8 : 4);
             validateField(activeInput);
         }
     });
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             if (activeInput) {
                 const value = this.getAttribute('data-value');
-                const maxLength = activeInput.id === 'username' ? 10 : 4;
+                const maxLength = activeInput.id === 'username' ? 8 : 4;
                 
                 if (activeInput.value.length < maxLength) {
                     activeInput.value += value;
@@ -94,19 +94,52 @@ document.addEventListener('DOMContentLoaded', function() {
             loginButton.textContent = 'Iniciando sesión...';
             loginButton.disabled = true;
             
-            setTimeout(() => {
-                alert('Inicio de sesión exitoso');
+            // Enviar el formulario
+            const formData = new FormData(loginForm);
+            
+            fetch('ProcesarLogin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                // Verificar si la respuesta es JSON
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    return response.json();
+                } else {
+                    // Si no es JSON, obtener el texto para debugging
+                    return response.text().then(text => {
+                        throw new TypeError("La respuesta no es JSON. Recibido: " + text.substring(0, 100));
+                    });
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    // Login exitoso - redirigir
+                    window.location.href = data.redirect || 'DashboardPrincipal.php';
+                } else {
+                    // Mostrar errores específicos
+                    if (data.error_type === 'username') {
+                        showGlobalError('usernameErrorGlobal', data.message);
+                    } else if (data.error_type === 'password') {
+                        showGlobalError('passwordErrorGlobal', data.message);
+                    } else {
+                        showGlobalError('generalError', data.message);
+                    }
+                    
+                    loginButton.textContent = 'Iniciar Sesión';
+                    loginButton.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showGlobalError('generalError', 'Error de conexión. Intenta nuevamente.');
                 loginButton.textContent = 'Iniciar Sesión';
                 loginButton.disabled = false;
-                loginForm.reset();
-                updateCharacterCount('username', 10);
-                updateCharacterCount('password', 4);
-                hideKeypad();
-                resetBodyPosition();
-            }, 1500);
-        }
-    });
-    
+            });
+        } // <-- Esta es la llave que faltaba para cerrar el if (isValid)
+    }); // <-- Esta es la llave que cierra el evento submit
+
     // Función para mostrar el teclado
     function showKeypad() {
         numericKeypad.classList.add('visible');
@@ -153,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function validateField(field) {
         const value = field.value.trim();
         const errorElement = document.getElementById(field.id + 'Error');
-        const maxLength = field.id === 'username' ? 10 : 4;
+        const maxLength = field.id === 'username' ? 8 : 4;
         const fieldName = field.id === 'username' ? 'número de control' : 'NIP';
         
         if (value === '') {
@@ -201,4 +234,24 @@ document.addEventListener('DOMContentLoaded', function() {
             resetBodyPosition();
         }
     });
-});
+
+    // Función para mostrar errores 
+    function showGlobalError(elementId, message) {
+        // Eliminar cualquier error existente
+        const existingErrors = document.querySelectorAll('.error-message-global');
+        existingErrors.forEach(error => error.remove());
+        
+        // Crear nuevo elemento de error
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message-global';
+        errorDiv.id = elementId;
+        errorDiv.textContent = message;
+        
+        // Insertar después del encabezado de login
+        const loginHeader = document.querySelector('.login-header');
+        loginHeader.parentNode.insertBefore(errorDiv, loginHeader.nextSibling);
+        
+        // Hacer scroll al error
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}); // <-- Esta llave cierra el DOMContentLoaded
