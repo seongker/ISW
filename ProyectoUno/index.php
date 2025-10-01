@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -14,15 +13,34 @@
             <p>Ingresa a tu cuenta para continuar</p>
         </div>
         
-        <form class="login-form" id="loginForm">
+        <?php
+        session_start();
+        // Mostrar mensajes de error específicos si existen
+        if (isset($_SESSION['error_username'])) {
+            echo '<div class="error-message-global" id="usernameErrorGlobal">' . $_SESSION['error_username'] . '</div>';
+            unset($_SESSION['error_username']);
+        }
+        
+        if (isset($_SESSION['error_password'])) {
+            echo '<div class="error-message-global" id="passwordErrorGlobal">' . $_SESSION['error_password'] . '</div>';
+            unset($_SESSION['error_password']);
+        }
+        
+        if (isset($_SESSION['error_login'])) {
+            echo '<div class="error-message-global">' . $_SESSION['error_login'] . '</div>';
+            unset($_SESSION['error_login']);
+        }
+        ?>
+        
+        <form class="login-form" id="loginForm" name="loginForm" action="ProcesarLogin.php" method="post" target="_self">
             <div class="form-group">
                 <label for="username">Número de control</label>
                 <div class="input-with-icon">
                     <i class="fas fa-user"></i>
                     <input type="text" id="username" name="username" placeholder="Ingresa tu número de control" 
-                           maxlength="10" readonly>
+                           maxlength="8" readonly>
                 </div>
-                <div class="character-count" id="usernameCount">0/10</div>
+                <div class="character-count" id="usernameCount">0/8</div>
                 <div class="error-message" id="usernameError">Por favor ingresa un número de control válido</div>
             </div>
             
