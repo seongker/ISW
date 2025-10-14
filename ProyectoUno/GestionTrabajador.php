@@ -56,12 +56,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $pin = limpiarDatos($_POST['pin'], $conexion);
     $rol = isset($_POST['rol']) ? limpiarDatos($_POST['rol'], $conexion) : 'trabajador';
     $estatus = isset($_POST['estatus']) ? (int)$_POST['estatus'] : 1;
-    
+
     // Obtener ID si estamos en modo edición
     $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
-    
-    // Validaciones básicas
-    if (empty($nombre) || empty($paterno) || empty($numero_control) || empty($pin)) {
+
+    // === VALIDACIONES BÁSICAS ===
+    if (empty($nombre) || empty($paterno) || empty($numero_control) || empty($pin) || empty($correo) || empty($telefono)) {
         $error = "Por favor, complete todos los campos obligatorios.";
     } elseif (strlen($pin) != 4 || !is_numeric($pin)) {
         $error = "El PIN debe tener exactamente 4 dígitos numéricos.";
@@ -70,100 +70,138 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (!is_numeric($pin)) {
         $error = "El PIN solo debe contener números.";
     } elseif (!preg_match('/^[0-9]{10}$/', $telefono)) {
-    $error = "El número de teléfono debe contener exactamente 10 dígitos.";
+        $error = "El número de teléfono debe contener exactamente 10 dígitos.";
     } elseif (!preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/', $nombre)) {
-    $error = "El nombre solo puede contener letras y espacios.";
+        $error = "El nombre solo puede contener letras y espacios.";
     } elseif (!preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/', $paterno)) {
-    $error = "El apellido paterno solo puede contener letras y espacios.";
+        $error = "El apellido paterno solo puede contener letras y espacios.";
     } elseif (!empty($materno) && !preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/', $materno)) {
-    $error = "El apellido materno solo puede contener letras y espacios.";
+        $error = "El apellido materno solo puede contener letras y espacios.";
     } elseif (!preg_match('/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.com$/', $correo)) {
-    $error = "El correo debe ser válido y terminar en .com";
-
+        $error = "El correo debe ser válido y terminar en .com";
     } else {
-        // VALIDACIÓN: Número de control único (excepto para el registro actual en edición)
-        $sql_check_numero = "SELECT COUNT(*) as total FROM usuarios WHERE NUM_USUARIO = '$numero_control'";
+        // === VALIDAR SI EL CORREO YA EXISTE ===
         if ($id > 0) {
-            $sql_check_numero .= " AND PERSONAS_idPERSONAS != $id";
-        }
-        $result_numero = $conexion->query($sql_check_numero);
-        $existe_numero = $result_numero->fetch_assoc()['total'] > 0;
-        
-        // VALIDACIÓN: Teléfono único (excepto para el registro actual en edición)
-        $sql_check_telefono = "SELECT COUNT(*) as total FROM personas WHERE TELEFONO = '$telefono' AND TELEFONO != ''";
-        if ($id > 0) {
-            $sql_check_telefono .= " AND idPERSONAS != $id";
-        }
-        $result_telefono = $conexion->query($sql_check_telefono);
-        $existe_telefono = $result_telefono->fetch_assoc()['total'] > 0;
-        
-        if ($existe_numero) {
-            $error = "El número de control ya está registrado en el sistema.";
-        } elseif ($existe_telefono) {
-            $error = "El número de teléfono ya está registrado en el sistema.";
+            $sql_check = "SELECT COUNT(*) AS total FROM personas WHERE CORREO = ? AND idPERSONAS != ?";
+            $stmt_check = $conexion->prepare($sql_check);
+            $stmt_check->bind_param("si", $correo, $id);
         } else {
-            // Iniciar transacción
-            $conexion->begin_transaction();
-            
-            try {
-                if ($id > 0) {
-                    // MODO EDICIÓN: Actualizar registro existente
-                    $sql_persona = "UPDATE personas SET 
-                                    NOMBRE = '$nombre', 
-                                    PATERNO = '$paterno', 
-                                    MATERNO = '$materno', 
-                                    CORREO = '$correo', 
-                                    TELEFONO = '$telefono', 
-                                    ROL = '$rol',
-                                    ESTATUS = $estatus 
-                                    WHERE idPERSONAS = $id";
-                    
-                    if ($conexion->query($sql_persona) === TRUE) {
+            $sql_check = "SELECT COUNT(*) AS total FROM personas WHERE CORREO = ?";
+            $stmt_check = $conexion->prepare($sql_check);
+            $stmt_check->bind_param("s", $correo);
+        }
+        $stmt_check->execute();
+        $result_check = $stmt_check->get_result();
+        $row_check = $result_check->fetch_assoc();
+
+        if ($row_check['total'] > 0) {
+            $error = "Este correo ya ha sido registrado.";
+        } else {
+            // VALIDACIÓN: Número de control único (excepto para el registro actual en edición)
+            if ($id > 0) {
+                $sql_check_numero = "SELECT COUNT(*) as total FROM usuarios WHERE NUM_USUARIO = ? AND PERSONAS_idPERSONAS != ?";
+                $stmt_num = $conexion->prepare($sql_check_numero);
+                $stmt_num->bind_param("si", $numero_control, $id);
+            } else {
+                $sql_check_numero = "SELECT COUNT(*) as total FROM usuarios WHERE NUM_USUARIO = ?";
+                $stmt_num = $conexion->prepare($sql_check_numero);
+                $stmt_num->bind_param("s", $numero_control);
+            }
+            $stmt_num->execute();
+            $result_numero = $stmt_num->get_result();
+            $existe_numero = $result_numero->fetch_assoc()['total'] > 0;
+
+            // VALIDACIÓN: Teléfono único (excepto para el registro actual en edición)
+            if ($id > 0) {
+                $sql_check_telefono = "SELECT COUNT(*) as total FROM personas WHERE TELEFONO = ? AND TELEFONO != '' AND idPERSONAS != ?";
+                $stmt_tel = $conexion->prepare($sql_check_telefono);
+                $stmt_tel->bind_param("si", $telefono, $id);
+            } else {
+                $sql_check_telefono = "SELECT COUNT(*) as total FROM personas WHERE TELEFONO = ? AND TELEFONO != ''";
+                $stmt_tel = $conexion->prepare($sql_check_telefono);
+                $stmt_tel->bind_param("s", $telefono);
+            }
+            $stmt_tel->execute();
+            $result_telefono = $stmt_tel->get_result();
+            $existe_telefono = $result_telefono->fetch_assoc()['total'] > 0;
+
+            if ($existe_numero) {
+                $error = "El número de control ya está registrado en el sistema.";
+            } elseif ($existe_telefono) {
+                $error = "El número de teléfono ya está registrado en el sistema.";
+            } else {
+                // Iniciar transacción
+                $conexion->begin_transaction();
+
+                try {
+                    if ($id > 0) {
+                        // MODO EDICIÓN: Actualizar registro existente
+                        $sql_persona = "UPDATE personas SET 
+                                        NOMBRE = ?, 
+                                        PATERNO = ?, 
+                                        MATERNO = ?, 
+                                        CORREO = ?, 
+                                        TELEFONO = ?, 
+                                        ROL = ?,
+                                        ESTATUS = ?
+                                        WHERE idPERSONAS = ?";
+                        $stmt_persona = $conexion->prepare($sql_persona);
+                        $stmt_persona->bind_param("ssssssii", $nombre, $paterno, $materno, $correo, $telefono, $rol, $estatus, $id);
+
+                        if ($stmt_persona->execute() === FALSE) {
+                            throw new Exception("Error al actualizar persona: " . $stmt_persona->error);
+                        }
+
                         // SOLO ACTUALIZAR DATOS BÁSICOS EN USUARIOS (SIN ESTATUS)
                         $sql_usuario = "UPDATE usuarios SET 
-                                        NUM_USUARIO = '$numero_control', 
-                                        PIN = '$pin'
-                                        WHERE PERSONAS_idPERSONAS = $id";
-                        
-                        if ($conexion->query($sql_usuario) === TRUE) {
-                            $conexion->commit();
-                            $mensaje = "Trabajador actualizado exitosamente.";
-                            $modo_edicion = false;
-                        } else {
-                            throw new Exception("Error al actualizar usuario: " . $conexion->error);
+                                        NUM_USUARIO = ?, 
+                                        PIN = ?
+                                        WHERE PERSONAS_idPERSONAS = ?";
+                        $stmt_usuario = $conexion->prepare($sql_usuario);
+                        $stmt_usuario->bind_param("ssi", $numero_control, $pin, $id);
+
+                        if ($stmt_usuario->execute() === FALSE) {
+                            throw new Exception("Error al actualizar usuario: " . $stmt_usuario->error);
                         }
+
+                        $conexion->commit();
+                        $mensaje = "Trabajador actualizado exitosamente.";
+                        $modo_edicion = false;
                     } else {
-                        throw new Exception("Error al actualizar persona: " . $conexion->error);
-                    }
-                } else {
-                    // MODO REGISTRO: Insertar nuevo registro
-                    $sql_persona = "INSERT INTO personas (NOMBRE, PATERNO, MATERNO, CORREO, TELEFONO, ROL, ESTATUS) 
-                                    VALUES ('$nombre', '$paterno', '$materno', '$correo', '$telefono', '$rol', $estatus)";
-                    
-                    if ($conexion->query($sql_persona) === TRUE) {
+                        // MODO REGISTRO: Insertar nuevo registro
+                        $sql_persona = "INSERT INTO personas (NOMBRE, PATERNO, MATERNO, CORREO, TELEFONO, ROL, ESTATUS) 
+                                        VALUES (?, ?, ?, ?, ?, ?, ?)";
+                        $stmt_persona = $conexion->prepare($sql_persona);
+                        $stmt_persona->bind_param("ssssssi", $nombre, $paterno, $materno, $correo, $telefono, $rol, $estatus);
+
+                        if ($stmt_persona->execute() === FALSE) {
+                            throw new Exception("Error al registrar persona: " . $stmt_persona->error);
+                        }
+
                         $id_persona = $conexion->insert_id;
-                        
+
                         // SOLO INSERTAR DATOS BÁSICOS EN USUARIOS (SIN ESTATUS)
                         $sql_usuario = "INSERT INTO usuarios (NUM_USUARIO, PIN, FECHA_CREACION, PERSONAS_idPERSONAS) 
-                                        VALUES ('$numero_control', '$pin', NOW(), $id_persona)";
-                        
-                        if ($conexion->query($sql_usuario) === TRUE) {
-                            $conexion->commit();
-                            $mensaje = "Trabajador registrado exitosamente.";
-                        } else {
-                            throw new Exception("Error al registrar usuario: " . $conexion->error);
+                                        VALUES (?, ?, NOW(), ?)";
+                        $stmt_usuario = $conexion->prepare($sql_usuario);
+                        $stmt_usuario->bind_param("ssi", $numero_control, $pin, $id_persona);
+
+                        if ($stmt_usuario->execute() === FALSE) {
+                            throw new Exception("Error al registrar usuario: " . $stmt_usuario->error);
                         }
-                    } else {
-                        throw new Exception("Error al registrar persona: " . $conexion->error);
+
+                        $conexion->commit();
+                        $mensaje = "Trabajador registrado exitosamente.";
                     }
+                } catch (Exception $e) {
+                    $conexion->rollback();
+                    $error = "Error en el proceso: " . $e->getMessage();
                 }
-            } catch (Exception $e) {
-                $conexion->rollback();
-                $error = "Error en el proceso: " . $e->getMessage();
             }
         }
     }
-}
+} 
+
 
 // Procesar eliminación de trabajador (dar de baja)
 if (isset($_GET['eliminar'])) {
@@ -235,28 +273,36 @@ $conexion->close();
                 </div>
             </div>
             
-            <nav class="sidebar-nav">
-                <ul>
-                    <li class="nav-item <?php echo $pagina_actual == 'dashboard' ? 'active' : ''; ?>">
-                        <a href="GestionTrabajador.php?pagina=dashboard">
-                            <i class="fas fa-home"></i>
-                            <span>Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="nav-item <?php echo $pagina_actual == 'gestion' ? 'active' : ''; ?>">
-                        <a href="GestionTrabajador.php?pagina=gestion">
-                            <i class="fas fa-users-cog"></i>
-                            <span>Gestión Trabajadores</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="logout.php">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Cerrar Sesión</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+<nav class="sidebar-nav">
+    <ul>
+        <li class="nav-item <?php echo $pagina_actual == 'dashboard' ? 'active' : ''; ?>">
+            <a href="GestionTrabajador.php?pagina=dashboard">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </a>
+        </li>
+        <li class="nav-item <?php echo $pagina_actual == 'gestion' ? 'active' : ''; ?>">
+            <a href="GestionTrabajador.php?pagina=gestion">
+                <i class="fas fa-users-cog"></i>
+                <span>Gestión Trabajadores</span>
+            </a>
+        </li>
+        <!-- 🔹 Nueva opción: Gestión Reportes -->
+        <li class="nav-item <?php echo $pagina_actual == 'reportes' ? 'active' : ''; ?>">
+            <a href="GestionReportes.php?pagina=reportes">
+                <i class="fas fa-file-alt"></i>
+                <span>Gestión Reportes</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="logout.php">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+
         </div>
         
         <!-- Contenido principal -->
@@ -392,21 +438,25 @@ $conexion->close();
                                 <div class="form-group">
                                     <label for="nombre">Nombre *</label>
                                     <input type="text" id="nombre" name="nombre" 
-                                           value="<?php echo $modo_edicion ? htmlspecialchars($datos_trabajador['NOMBRE']) : ''; ?>" 
-                                           required>
+                                           value="<?php echo ($modo_edicion && isset($datos_trabajador['NOMBRE'])) ? htmlspecialchars($datos_trabajador['NOMBRE']) : ''; ?>"
+                                           pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+" required
+                                           title="Solo se permiten letras y espacios">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="paterno">Apellido Paterno *</label>
                                     <input type="text" id="paterno" name="paterno" 
-                                           value="<?php echo $modo_edicion ? htmlspecialchars($datos_trabajador['PATERNO']) : ''; ?>" 
-                                           required>
+                                           value="<?php echo ($modo_edicion && isset($datos_trabajador['PATERNO'])) ? htmlspecialchars($datos_trabajador['PATERNO']) : ''; ?>" 
+                                           pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+" required 
+                                           title="Solo se permiten letras y espacios">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="materno">Apellido Materno</label>
                                     <input type="text" id="materno" name="materno" 
-                                           value="<?php echo $modo_edicion ? htmlspecialchars($datos_trabajador['MATERNO']) : ''; ?>">
+                                           value="<?php echo ($modo_edicion && isset($datos_trabajador['MATERNO'])) ? htmlspecialchars($datos_trabajador['MATERNO']) : ''; ?>" 
+                                           pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+" 
+                                           title="Solo se permiten letras y espacios">
                                 </div>
                             </div>
                             
@@ -414,13 +464,17 @@ $conexion->close();
                                 <div class="form-group">
                                     <label for="correo">Correo Electrónico</label>
                                     <input type="email" id="correo" name="correo" 
-                                           value="<?php echo $modo_edicion ? htmlspecialchars($datos_trabajador['CORREO']) : ''; ?>">
+                                            value="<?php echo ($modo_edicion && isset($datos_trabajador['CORREO'])) ? htmlspecialchars($datos_trabajador['CORREO']) : ''; ?>" 
+                                            pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.com$" required
+                                            title="El correo debe contener '@' y terminar en .com">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="telefono">Teléfono</label>
                                     <input type="tel" id="telefono" name="telefono" 
-                                           value="<?php echo $modo_edicion ? htmlspecialchars($datos_trabajador['TELEFONO']) : ''; ?>">
+                                           value="<?php echo $modo_edicion ? htmlspecialchars($datos_trabajador['TELEFONO']) : ''; ?>" 
+                                           pattern="[0-9]{10}" maxlength="10" required
+                                           title="El número de teléfono debe contener exactamente 10 dígitos">
                                 </div>
                             </div>
                             

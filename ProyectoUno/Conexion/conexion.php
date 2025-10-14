@@ -2,8 +2,8 @@
 // Conexión a la base de datos MySQL
 $servidor = "localhost";
 $usuario = "root";
-$password = "admin123";
-$basedatos = "is";
+$password = "";
+$basedatos = "isw";
 
 // Crear conexión
 $conexion = new mysqli($servidor, $usuario, $password, $basedatos);

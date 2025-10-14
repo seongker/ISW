@@ -69,19 +69,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $error = "El número de control solo debe contener números.";
     } elseif (!is_numeric($pin)) {
         $error = "El PIN solo debe contener números.";
-     } elseif (!preg_match('/^[0-9]{10}$/', $telefono)) {
-    $error = "El número de teléfono debe contener exactamente 10 dígitos.";
-    } elseif (!preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/', $nombre)) {
-    $error = "El nombre solo puede contener letras y espacios.";
-    } elseif (!preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/', $paterno)) {
-    $error = "El apellido paterno solo puede contener letras y espacios.";
-    } elseif (!empty($materno) && !preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/', $materno)) {
-    $error = "El apellido materno solo puede contener letras y espacios.";
-    } elseif (!preg_match('/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.com$/', $correo)) {
-    $error = "El correo debe ser válido y terminar en .com";
-
-
-
     } else {
         // VALIDACIÓN: Número de control único (excepto para el registro actual en edición)
         $sql_check_numero = "SELECT COUNT(*) as total FROM usuarios WHERE NUM_USUARIO = '$numero_control'";
