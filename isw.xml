@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+- phpMyAdmin XML Dump
+- version 5.2.1
+- https://www.phpmyadmin.net
+-
+- Servidor: 127.0.0.1
+- Tiempo de generación: 14-10-2025 a las 03:38:03
+- Versión del servidor: 10.4.32-MariaDB
+- Versión de PHP: 8.2.12
+-->
+
+<pma_xml_export version="1.0" xmlns:pma="https://www.phpmyadmin.net/some_doc_url/">
+    <!--
+    - Structure schemas
+    -->
+    <pma:structure_schemas>
+        <pma:database name="isw" collation="utf8mb4_general_ci" charset="utf8mb4">
+            <pma:table name="insumos">
+                CREATE TABLE `insumos` (
+                  `idINSUMOS` int(11) NOT NULL AUTO_INCREMENT,
+                  `LABORATORIOS_idLABORATORIOS` int(11) NOT NULL,
+                  `NOMBRE` varchar(30) DEFAULT NULL,
+                  `DESCRIPCION` varchar(200) DEFAULT NULL,
+                  `CANTIDAD_DIS` int(11) DEFAULT NULL,
+                  `ESTATUS` tinyint(1) NOT NULL DEFAULT 1,
+                  PRIMARY KEY (`idINSUMOS`),
+                  KEY `fk_INSUMOS_LABORATORIOS` (`LABORATORIOS_idLABORATORIOS`),
+                  CONSTRAINT `fk_INSUMOS_LABORATORIOS` FOREIGN KEY (`LABORATORIOS_idLABORATORIOS`) REFERENCES `laboratorios` (`idLABORATORIOS`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            </pma:table>
+            <pma:table name="laboratorios">
+                CREATE TABLE `laboratorios` (
+                  `idLABORATORIOS` int(11) NOT NULL AUTO_INCREMENT,
+                  `PERSONAS_idPERSONAS` int(11) NOT NULL,
+                  `NOM_LAB` varchar(50) DEFAULT NULL,
+                  `ENCARGADO_LAB` varchar(30) DEFAULT NULL,
+                  `HORARIO` time DEFAULT NULL,
+                  `UBICACION` varchar(30) DEFAULT NULL,
+                  PRIMARY KEY (`idLABORATORIOS`),
+                  KEY `fk_LABORATORIOS_PERSONAS` (`PERSONAS_idPERSONAS`),
+                  CONSTRAINT `fk_LABORATORIOS_PERSONAS` FOREIGN KEY (`PERSONAS_idPERSONAS`) REFERENCES `personas` (`idPERSONAS`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            </pma:table>
+            <pma:table name="personas">
+                CREATE TABLE `personas` (
+                  `idPERSONAS` int(11) NOT NULL AUTO_INCREMENT,
+                  `NOMBRE` varchar(30) DEFAULT NULL,
+                  `PATERNO` varchar(30) DEFAULT NULL,
+                  `MATERNO` varchar(30) DEFAULT NULL,
+                  `CORREO` varchar(200) DEFAULT NULL,
+                  `TELEFONO` bigint(20) DEFAULT NULL,
+                  `ROL` enum(&#039;alumno&#039;,&#039;maestro&#039;,&#039;trabajador&#039;) DEFAULT NULL,
+                  `ESTATUS` tinyint(1) NOT NULL DEFAULT 1,
+                  PRIMARY KEY (`idPERSONAS`),
+                  UNIQUE KEY `correo_unico` (`CORREO`)
+                ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            </pma:table>
+            <pma:table name="prestamos">
+                CREATE TABLE `prestamos` (
+                  `idPRESTAMOS` int(11) NOT NULL AUTO_INCREMENT,
+                  `PERSONAS_idPERSONAS` int(11) NOT NULL,
+                  `INSUMOS_idINSUMOS` int(11) NOT NULL,
+                  `FECHA_PRESTA` date DEFAULT NULL,
+                  `FECHA_DEV` date DEFAULT NULL,
+                  `ESTATUS` tinyint(1) NOT NULL DEFAULT 1,
+                  `CANTIDAD` int(11) DEFAULT NULL,
+                  PRIMARY KEY (`idPRESTAMOS`),
+                  KEY `fk_PRESTAMOS_PERSONAS` (`PERSONAS_idPERSONAS`),
+                  KEY `fk_PRESTAMOS_INSUMOS` (`INSUMOS_idINSUMOS`),
+                  CONSTRAINT `fk_PRESTAMOS_INSUMOS` FOREIGN KEY (`INSUMOS_idINSUMOS`) REFERENCES `insumos` (`idINSUMOS`),
+                  CONSTRAINT `fk_PRESTAMOS_PERSONAS` FOREIGN KEY (`PERSONAS_idPERSONAS`) REFERENCES `personas` (`idPERSONAS`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            </pma:table>
+            <pma:table name="reporte">
+                CREATE TABLE `reporte` (
+                  `idREPORTE` int(11) NOT NULL AUTO_INCREMENT,
+                  `LABORATORIOS_idLABORATORIOS` int(11) NOT NULL,
+                  `PERSONAS_idPERSONAS` int(11) NOT NULL,
+                  `DESCRIPCION` varchar(200) DEFAULT NULL,
+                  `FECHA` date DEFAULT NULL,
+                  PRIMARY KEY (`idREPORTE`),
+                  KEY `fk_REPORTE_LABORATORIOS` (`LABORATORIOS_idLABORATORIOS`),
+                  KEY `fk_REPORTE_PERSONAS` (`PERSONAS_idPERSONAS`),
+                  CONSTRAINT `fk_REPORTE_LABORATORIOS` FOREIGN KEY (`LABORATORIOS_idLABORATORIOS`) REFERENCES `laboratorios` (`idLABORATORIOS`),
+                  CONSTRAINT `fk_REPORTE_PERSONAS` FOREIGN KEY (`PERSONAS_idPERSONAS`) REFERENCES `personas` (`idPERSONAS`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            </pma:table>
+            <pma:table name="reportes">
+                CREATE TABLE `reportes` (
+                  `idReporte` int(11) NOT NULL AUTO_INCREMENT,
+                  `tipo_incidencia` varchar(100) NOT NULL,
+                  `elabora` varchar(100) NOT NULL,
+                  `reporta` varchar(100) NOT NULL,
+                  `responsable` varchar(100) NOT NULL,
+                  `descripcion` text NOT NULL,
+                  `estatus` varchar(50) NOT NULL DEFAULT &#039;Pendiente&#039;,
+                  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+                  `accion` varchar(200) DEFAULT NULL,
+                  PRIMARY KEY (`idReporte`)
+                ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            </pma:table>
+            <pma:table name="solicitud_insumos">
+                CREATE TABLE `solicitud_insumos` (
+                  `PERSONAS_idPERSONAS` int(11) NOT NULL,
+                  `INSUMOS_idINSUMOS` int(11) NOT NULL,
+                  `idSOLICITUD` int(11) NOT NULL AUTO_INCREMENT,
+                  `CANTIDAD` int(11) DEFAULT NULL,
+                  `FECHA_SOLICITUD` date DEFAULT NULL,
+                  `ESTATUS` tinyint(1) NOT NULL DEFAULT 1,
+                  PRIMARY KEY (`idSOLICITUD`),
+                  KEY `fk_SOLICITUD_INSUMOS_PERSONAS` (`PERSONAS_idPERSONAS`),
+                  KEY `fk_SOLICITUD_INSUMOS_INSUMOS` (`INSUMOS_idINSUMOS`),
+                  CONSTRAINT `fk_SOLICITUD_INSUMOS_INSUMOS` FOREIGN KEY (`INSUMOS_idINSUMOS`) REFERENCES `insumos` (`idINSUMOS`),
+                  CONSTRAINT `fk_SOLICITUD_INSUMOS_PERSONAS` FOREIGN KEY (`PERSONAS_idPERSONAS`) REFERENCES `personas` (`idPERSONAS`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            </pma:table>
+            <pma:table name="usuarios">
+                CREATE TABLE `usuarios` (
+                  `idUSUARIOS` int(11) NOT NULL AUTO_INCREMENT,
+                  `PERSONAS_idPERSONAS` int(11) NOT NULL,
+                  `NUM_USUARIO` int(11) DEFAULT NULL,
+                  `PIN` int(11) DEFAULT NULL,
+                  `FECHA_CREACION` date DEFAULT NULL,
+                  PRIMARY KEY (`idUSUARIOS`),
+                  KEY `fk_USUARIOS_PERSONAS` (`PERSONAS_idPERSONAS`),
+                  CONSTRAINT `fk_USUARIOS_PERSONAS` FOREIGN KEY (`PERSONAS_idPERSONAS`) REFERENCES `personas` (`idPERSONAS`)
+                ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            </pma:table>
+        </pma:database>
+    </pma:structure_schemas>
+
+    <!--
+    - Base de datos: 'isw'
+    -->
+    <database name="isw">
+        <!-- Tabla insumos -->
+        <!-- Tabla laboratorios -->
+        <!-- Tabla personas -->
+        <table name="personas">
+            <column name="idPERSONAS">1</column>
+            <column name="NOMBRE">Juan</column>
+            <column name="PATERNO">Pérez</column>
+            <column name="MATERNO">Gómez</column>
+            <column name="CORREO">juan.perez@escuela.com</column>
+            <column name="TELEFONO">555</column>
+            <column name="ROL">trabajador</column>
+            <column name="ESTATUS">0</column>
+        </table>
+        <table name="personas">
+            <column name="idPERSONAS">2</column>
+            <column name="NOMBRE">aaaa424242</column>
+            <column name="PATERNO">ji3emiemi23</column>
+            <column name="MATERNO">jiorm32ri3</column>
+            <column name="CORREO">pedro.picapiedra@its.com</column>
+            <column name="TELEFONO">0</column>
+            <column name="ROL">alumno</column>
+            <column name="ESTATUS">0</column>
+        </table>
+        <table name="personas">
+            <column name="idPERSONAS">3</column>
+            <column name="NOMBRE">mario</column>
+            <column name="PATERNO">ruiz</column>
+            <column name="MATERNO">fraustro</column>
+            <column name="CORREO">fimefienfie@its</column>
+            <column name="TELEFONO">0</column>
+            <column name="ROL">trabajador</column>
+            <column name="ESTATUS">0</column>
+        </table>
+        <table name="personas">
+            <column name="idPERSONAS">4</column>
+            <column name="NOMBRE">mario</column>
+            <column name="PATERNO">luis</column>
+            <column name="MATERNO">rodriguez</column>
+            <column name="CORREO">nfiomnrfo@hotmail.com</column>
+            <column name="TELEFONO">8902783872</column>
+            <column name="ROL">trabajador</column>
+            <column name="ESTATUS">1</column>
+        </table>
+        <table name="personas">
+            <column name="idPERSONAS">5</column>
+            <column name="NOMBRE">LUIS</column>
+            <column name="PATERNO">RODRIGEUES</column>
+            <column name="MATERNO">PEREZ</column>
+            <column name="CORREO">MIAOWJDIWJD@HOTMAIL.COM</column>
+            <column name="TELEFONO">9832973829</column>
+            <column name="ROL">alumno</column>
+            <column name="ESTATUS">1</column>
+        </table>
+        <table name="personas">
+            <column name="idPERSONAS">6</column>
+            <column name="NOMBRE">juan</column>
+            <column name="PATERNO">gomez</column>
+            <column name="MATERNO">perez</column>
+            <column name="CORREO">marioruizfraustro@hotmail</column>
+            <column name="TELEFONO">8397283962</column>
+            <column name="ROL">trabajador</column>
+            <column name="ESTATUS">0</column>
+        </table>
+        <table name="personas">
+            <column name="idPERSONAS">7</column>
+            <column name="NOMBRE">juanito</column>
+            <column name="PATERNO">banana</column>
+            <column name="MATERNO">equisde</column>
+            <column name="CORREO">jiomri3omr@hotmail</column>
+            <column name="TELEFONO">3232424242</column>
+            <column name="ROL">trabajador</column>
+            <column name="ESTATUS">0</column>
+        </table>
+        <table name="personas">
+            <column name="idPERSONAS">8</column>
+            <column name="NOMBRE">Mario</column>
+            <column name="PATERNO">Ruiz</column>
+            <column name="MATERNO">Fraustro</column>
+            <column name="CORREO">marioruizfraustro@hotmail.com</column>
+            <column name="TELEFONO">8442053128</column>
+            <column name="ROL">trabajador</column>
+            <column name="ESTATUS">1</column>
+        </table>
+        <table name="personas">
+            <column name="idPERSONAS">9</column>
+            <column name="NOMBRE">Ivan</column>
+            <column name="PATERNO">Perez</column>
+            <column name="MATERNO">Macias</column>
+            <column name="CORREO">mruizfraustro@gmail.com</column>
+            <column name="TELEFONO">8442394103</column>
+            <column name="ROL">trabajador</column>
+            <column name="ESTATUS">1</column>
+        </table>
+        <!-- Tabla prestamos -->
+        <!-- Tabla reporte -->
+        <!-- Tabla reportes -->
+        <table name="reportes">
+            <column name="idReporte">1</column>
+            <column name="tipo_incidencia">Daño de equipo</column>
+            <column name="elabora">Mario </column>
+            <column name="reporta">mario</column>
+            <column name="responsable">juan</column>
+            <column name="descripcion">se rompio el ups</column>
+            <column name="estatus">En revisión</column>
+            <column name="fecha">2025-10-13 00:15:54</column>
+            <column name="accion">NULL</column>
+        </table>
+        <table name="reportes">
+            <column name="idReporte">2</column>
+            <column name="tipo_incidencia">Daño de equipo</column>
+            <column name="elabora">Mario </column>
+            <column name="reporta">Pedro </column>
+            <column name="responsable">Memito</column>
+            <column name="descripcion">se rompio un cable </column>
+            <column name="estatus">En revisión</column>
+            <column name="fecha">2025-10-13 19:23:37</column>
+            <column name="accion">El responsable pago los daños </column>
+        </table>
+        <table name="reportes">
+            <column name="idReporte">5</column>
+            <column name="tipo_incidencia">Pérdida de material</column>
+            <column name="elabora">juan</column>
+            <column name="reporta">pedro</column>
+            <column name="responsable">mario</column>
+            <column name="descripcion">se porto mal </column>
+            <column name="estatus">En revisión</column>
+            <column name="fecha">2025-10-13 19:33:45</column>
+            <column name="accion">regaño</column>
+        </table>
+        <!-- Tabla solicitud_insumos -->
+        <!-- Tabla usuarios -->
+        <table name="usuarios">
+            <column name="idUSUARIOS">1</column>
+            <column name="PERSONAS_idPERSONAS">1</column>
+            <column name="NUM_USUARIO">21051383</column>
+            <column name="PIN">1234</column>
+            <column name="FECHA_CREACION">2025-09-19</column>
+        </table>
+        <table name="usuarios">
+            <column name="idUSUARIOS">3</column>
+            <column name="PERSONAS_idPERSONAS">3</column>
+            <column name="NUM_USUARIO">20232323</column>
+            <column name="PIN">2323</column>
+            <column name="FECHA_CREACION">2025-09-21</column>
+        </table>
+        <table name="usuarios">
+            <column name="idUSUARIOS">4</column>
+            <column name="PERSONAS_idPERSONAS">4</column>
+            <column name="NUM_USUARIO">2323232</column>
+            <column name="PIN">3232</column>
+            <column name="FECHA_CREACION">2025-09-22</column>
+        </table>
+        <table name="usuarios">
+            <column name="idUSUARIOS">5</column>
+            <column name="PERSONAS_idPERSONAS">5</column>
+            <column name="NUM_USUARIO">20392033</column>
+            <column name="PIN">393</column>
+            <column name="FECHA_CREACION">2025-09-22</column>
+        </table>
+        <table name="usuarios">
+            <column name="idUSUARIOS">6</column>
+            <column name="PERSONAS_idPERSONAS">6</column>
+            <column name="NUM_USUARIO">32323232</column>
+            <column name="PIN">3232</column>
+            <column name="FECHA_CREACION">2025-09-22</column>
+        </table>
+        <table name="usuarios">
+            <column name="idUSUARIOS">7</column>
+            <column name="PERSONAS_idPERSONAS">7</column>
+            <column name="NUM_USUARIO">48920740</column>
+            <column name="PIN">3429</column>
+            <column name="FECHA_CREACION">2025-09-22</column>
+        </table>
+        <table name="usuarios">
+            <column name="idUSUARIOS">8</column>
+            <column name="PERSONAS_idPERSONAS">8</column>
+            <column name="NUM_USUARIO">25280</column>
+            <column name="PIN">1903</column>
+            <column name="FECHA_CREACION">2025-10-01</column>
+        </table>
+        <table name="usuarios">
+            <column name="idUSUARIOS">9</column>
+            <column name="PERSONAS_idPERSONAS">9</column>
+            <column name="NUM_USUARIO">20558909</column>
+            <column name="PIN">1903</column>
+            <column name="FECHA_CREACION">2025-10-03</column>
+        </table>
+    </database>
+</pma_xml_export>
